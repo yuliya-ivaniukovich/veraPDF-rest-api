@@ -1,14 +1,16 @@
 package com.verapdf.restapi.entity;
 
 import java.io.File;
+import java.util.LinkedList;
 import java.util.UUID;
 
 public class Job {
     private UUID jobId;
 
-    private File[] files;
+    private LinkedList<File> files;
 
     public Job() {
+        files = new LinkedList<>();
         setJobId(UUID.randomUUID());
     }
 
@@ -20,11 +22,11 @@ public class Job {
         this.jobId = jobId;
     }
 
-    public File[] getFiles() {
+    public LinkedList<File> getFiles() {
         return files;
     }
 
-    public void setFiles(File[] files) {
-        this.files = files;
+    public void addFile(File file) {
+        files.add(file);
     }
-}
+ }

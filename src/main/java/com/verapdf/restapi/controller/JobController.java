@@ -3,6 +3,7 @@ package com.verapdf.restapi.controller;
 import com.verapdf.restapi.entity.Job;
 import com.verapdf.restapi.service.interfaces.JobService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,24 +30,32 @@ public class JobController {
     }
 
     @PostMapping("/{jobId}/files")
-    public String uploadFiles(@PathVariable UUID jobId, @RequestParam("files")MultipartFile[] file) {
+    public HttpStatus uploadFiles(@PathVariable UUID jobId, @RequestParam MultipartFile[] file) {
         Job job = jobService.getJob(jobId);
-        return "upload files";
+        if (job == null) {
+            return HttpStatus.BAD_REQUEST;
+        }
+        jobService.setFiles(job, file);
+        return HttpStatus.OK;
     }
 
-    @DeleteMapping("/{jobId}/files}")
-    public String deleteFiles(@PathVariable UUID jobId) {
+    @DeleteMapping("/{jobId}/{fileNames}")
+    public HttpStatus deleteFiles(@PathVariable UUID jobId, @PathVariable String[] fileNames) {
         Job job = jobService.getJob(jobId);
-        return "delete files";
+        if (job == null) {
+            return HttpStatus.BAD_REQUEST;
+        }
+        jobService.deleteFiles(job, fileNames);
+        return HttpStatus.OK;
     }
 
-    @PostMapping("/{jobId}/paths")
-    public String createPaths(@PathVariable UUID jobId) {
+    @PostMapping("/{jobId}/{paths}")
+    public String createPaths(@PathVariable UUID jobId, @PathVariable String[] paths) {
         return "create paths";
     }
 
-    @DeleteMapping("/{jobId}/paths")
-    public String deletePaths(@PathVariable UUID jobId) {
+    @DeleteMapping("/{jobId}/{paths}")
+    public String deletePaths(@PathVariable UUID jobId, @PathVariable String[] paths) {
         return "deletePaths";
     }
 
