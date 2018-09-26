@@ -1,0 +1,13 @@
+{
+  "properties": [
+    {
+      "name": "jobs",
+      "type": "java.lang.String",
+      "description": "Root for all jobs."
+    },
+    {
+      "name": "pdfRoot",
+      "type": "java.lang.String",
+      "description": "The name of the root for PDF files."
+    }
+  ] }

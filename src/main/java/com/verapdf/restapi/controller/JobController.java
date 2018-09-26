@@ -1,18 +1,17 @@
 package com.verapdf.restapi.controller;
 
-import com.verapdf.restapi.entity.Job;
+import com.verapdf.restapi.dto.PathDTO;
 import com.verapdf.restapi.service.JobService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
-@RequestMapping("/job")
+@RequestMapping("/jobs")
 public class JobController {
 
     private final static String JOB_NOT_FOUND = "Job not found.";
@@ -24,56 +23,38 @@ public class JobController {
         this.jobService = jobService;
     }
 
-    @GetMapping
+    @PostMapping
     public Map<String, String> startJob() {
-        Job job = new Job();
-        jobService.addJob(job);
-        return Collections.singletonMap("jobId", job.getJobId().toString());
+        UUID uuid = jobService.createJob();
+        return Collections.singletonMap("jobId", uuid.toString());
     }
 
     @DeleteMapping(value = "/{jobId}")
     public ResponseEntity<String> closeJob(@PathVariable UUID jobId) {
-        Job job = jobService.getJob(jobId);
-        if (job == null) {
-            return ResponseEntity.badRequest().body(JOB_NOT_FOUND);
+        UUID uuid = jobService.closeJob(jobId);
+        if (uuid == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(JOB_NOT_FOUND);
         }
-        jobService.closeJob(job);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(uuid.toString());
     }
 
     @PostMapping(value="/{jobId}/files")
-    public ResponseEntity<String> uploadFiles(@PathVariable UUID jobId, @RequestParam("file") MultipartFile[] files) {
-        Job job = jobService.getJob(jobId);
+    public ResponseEntity<String> uploadFiles(@PathVariable UUID jobId, @RequestParam("file") List<MultipartFile> files) {
+        jobService.setFiles(jobId, files);
 
-        if (job == null) {
-            return ResponseEntity.badRequest().body(JOB_NOT_FOUND);
-        }
-
-        jobService.setFiles(job, files);
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{jobId}/localFiles")
-    public ResponseEntity<String> deleteFiles(@PathVariable UUID jobId, @RequestParam("fileName") String[] fileNames) {
-        Job job = jobService.getJob(jobId);
-        if (job == null) {
-            return ResponseEntity.badRequest().body(JOB_NOT_FOUND);
-        }
-        jobService.deleteFiles(job, fileNames);
+    public ResponseEntity<String> deleteFiles(@PathVariable UUID jobId, @RequestParam("fileName") List<String> fileNames) {
+        jobService.deleteFiles(jobId, fileNames);
 
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{jobId}/localPaths")
-    public ResponseEntity<String> createPaths(@PathVariable UUID jobId, @RequestParam("path") String[] paths) {
-
-        Job job = jobService.getJob(jobId);
-
-        if (job == null) {
-            return ResponseEntity.badRequest().body(JOB_NOT_FOUND);
-        }
-
-        jobService.setPaths(job, paths);
+    @PostMapping("/{jobId}/localFiles")
+    public ResponseEntity<String> createPaths(@PathVariable UUID jobId, @RequestBody PathDTO dto) {
+         jobService.setPath(jobId, dto.getLocalPath());
 
         return ResponseEntity.ok().build();
     }

@@ -1,12 +1,16 @@
 package com.verapdf.restapi.entity;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.verapdf.restapi.utils.FileUtils;
+import org.apache.logging.log4j.LogManager;
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+
+import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
@@ -14,32 +18,57 @@ import java.util.UUID;
 
 public class Job implements Closeable {
 
-    private static final Logger log = LoggerFactory.getLogger(Job.class);
+    private static final Logger log = LogManager.getLogger(Job.class);
 
     private UUID jobId;
 
     private List<File> files;
     private List<File> tempFiles;
+    private Path jobDirectory;
+    private Path pdfDirectory;
 
-    public Job() {
+    public Job(String rootDirectory, String pdfDirectory) {
         files = new LinkedList<>();
         tempFiles = new LinkedList<>();
-        setJobId(UUID.randomUUID());
+        this.jobId = UUID.randomUUID();
+        this.jobDirectory = Paths.get(rootDirectory, jobId.toString());
+        this.pdfDirectory = Paths.get(rootDirectory, jobId.toString(), pdfDirectory);
+        prepareJob();
+    }
+
+    private void prepareJob() {
+        FileUtils.createDirectory(pdfDirectory);
     }
 
     public UUID getJobId() {
         return jobId;
     }
 
-    private void setJobId(UUID jobId) {
-        this.jobId = jobId;
+    public void addFiles(List<MultipartFile> files) {
+        for (MultipartFile file : files) {
+            Path filePath = Paths.get(pdfDirectory.toString(), file.getOriginalFilename());
+            File newFile = new File(filePath.toString());
+            try (
+                    InputStream inputStream =file.getInputStream();
+                    OutputStream outputStream = new FileOutputStream(newFile)
+            ) {
+                int read;
+                byte[] bytes = new byte[1024];
+                while ((read = inputStream.read(bytes)) != -1) {
+                    outputStream.write(bytes, 0, read);
+                }
+                addFile(newFile, true);
+            } catch (IOException e) {
+                log.error("Unable to transfer file.", e);
+            }
+
+        }
     }
 
     public void addFile(File file, boolean isTemp) {
         if (isTemp) {
             tempFiles.add(file);
-        }
-        else {
+        } else {
             files.add(file);
         }
     }
@@ -56,9 +85,14 @@ public class Job implements Closeable {
             for (File file : tempFiles) {
                 Files.deleteIfExists(Paths.get(file.getAbsolutePath()));
             }
+        } catch (IOException e) {
+            log.error("Unable to delete the file", e);
         }
-        catch (IOException e) {
-            log.error("Unable to delete the file");
+
+        try {
+            org.apache.commons.io.FileUtils.deleteDirectory(new File(jobDirectory.toString()));
+        } catch (IOException e) {
+            log.error("Unable to delete directory", e);
         }
 
     }
