@@ -1,6 +1,6 @@
 package com.verapdf.restapi.exception;
 
-public class JobNotFoundException extends RuntimeException {
+public class JobNotFoundException extends VeraPDFRestApiException {
 
     public JobNotFoundException() {
         super();

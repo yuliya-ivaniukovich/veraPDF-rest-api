@@ -2,6 +2,7 @@ package com.verapdf.restapi.controller;
 
 import com.verapdf.restapi.exception.FileNotFoundException;
 import com.verapdf.restapi.exception.JobNotFoundException;
+import com.verapdf.restapi.exception.VeraPDFRestApiException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler({JobNotFoundException.class, FileNotFoundException.class})
-    public ResponseEntity<String> handleJobNotFoundException(RuntimeException e) {
+    public ResponseEntity<String> handleJobNotFoundException(VeraPDFRestApiException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
     }
 
