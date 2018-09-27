@@ -1,5 +1,6 @@
 package com.verapdf.restapi.controller;
 
+import com.verapdf.restapi.dto.FileNameDTO;
 import com.verapdf.restapi.dto.PathDTO;
 import com.verapdf.restapi.service.JobService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,15 +40,16 @@ public class JobController {
     }
 
     @PostMapping(value="/{jobId}/files")
-    public ResponseEntity<String> uploadFiles(@PathVariable UUID jobId, @RequestParam("file") List<MultipartFile> files) {
-        jobService.setFiles(jobId, files);
+    public ResponseEntity<String> uploadFiles(@PathVariable UUID jobId, @RequestParam("file") MultipartFile file) {
+        jobService.setFile(jobId, file);
 
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{jobId}/localFiles")
-    public ResponseEntity<String> deleteFiles(@PathVariable UUID jobId, @RequestParam("fileName") List<String> fileNames) {
-        jobService.deleteFiles(jobId, fileNames);
+    public ResponseEntity<String> deleteFiles(@PathVariable UUID jobId, @RequestBody FileNameDTO dto) {
+
+        jobService.deleteFile(jobId, dto.getFileName());
 
         return ResponseEntity.ok().build();
     }

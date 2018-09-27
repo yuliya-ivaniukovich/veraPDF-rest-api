@@ -6,7 +6,6 @@ import org.apache.logging.log4j.LogManager;
 import java.io.*;
 
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
@@ -24,6 +23,7 @@ public class Job implements Closeable {
 
     private List<File> files;
     private List<File> tempFiles;
+
     private Path jobDirectory;
     private Path pdfDirectory;
 
@@ -46,31 +46,32 @@ public class Job implements Closeable {
 
     public void addFiles(List<MultipartFile> files) {
         for (MultipartFile file : files) {
-            Path filePath = Paths.get(pdfDirectory.toString(), file.getOriginalFilename());
-            File newFile = new File(filePath.toString());
-            try (
-                    InputStream inputStream =file.getInputStream();
-                    OutputStream outputStream = new FileOutputStream(newFile)
-            ) {
-                int read;
-                byte[] bytes = new byte[1024];
-                while ((read = inputStream.read(bytes)) != -1) {
-                    outputStream.write(bytes, 0, read);
-                }
-                addFile(newFile, true);
-            } catch (IOException e) {
-                log.error("Unable to transfer file.", e);
-            }
-
+            addSingleFile(file);
         }
     }
 
-    public void addFile(File file, boolean isTemp) {
-        if (isTemp) {
-            tempFiles.add(file);
-        } else {
-            files.add(file);
+    public void addSingleFile(MultipartFile file) {
+        Path filePath = Paths.get(pdfDirectory.toString(), file.getOriginalFilename());
+        File newFile = new File(filePath.toString());
+        try (
+                InputStream inputStream =file.getInputStream();
+                OutputStream outputStream = new FileOutputStream(newFile)
+        ) {
+            int read;
+            byte[] bytes = new byte[1024];
+            while ((read = inputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, read);
+            }
+            tempFiles.add(newFile);
+        } catch (IOException e) {
+            log.error("Unable to transfer file.", e);
         }
+
+    }
+
+    public void addSinglePath(String path) {
+        File file = new File(path);
+        files.add(file);
     }
 
     public void deleteFiles(String[] paths) {

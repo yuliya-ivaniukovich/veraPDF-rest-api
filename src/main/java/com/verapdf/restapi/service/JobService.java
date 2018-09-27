@@ -58,19 +58,28 @@ public class JobService {
         job.addFiles(files);
     }
 
-    public void deleteFiles(UUID uuid, List<String> fileNames) {
+    public void setFile(UUID uuid, MultipartFile file) {
         Job job = getJob(uuid);
         if (job == null) {
             throw new JobNotFoundException(JOB_NOT_FOUND);
         }
-        for (String fileName : fileNames) {
-            Path filePath = Paths.get(jobsPath, job.getJobId().toString(), fileName);
+        job.addSingleFile(file);
+    }
+
+    public void deleteFile(UUID uuid, String fileName) {
+        Job job = getJob(uuid);
+        if (job == null) {
+            throw new JobNotFoundException(JOB_NOT_FOUND);
+        }
+            Path filePath = Paths.get(jobsPath, job.getJobId().toString(), pdfRootPath, fileName);
+
+        log.debug("Delete path: " + filePath.toString());
+
             try {
                 Files.deleteIfExists(filePath);
             } catch (IOException e) {
                 log.error("Unable to delete file.", e);
             }
-        }
     }
 
     public void setPath(UUID uuid, String path) {
@@ -79,7 +88,7 @@ public class JobService {
             throw new JobNotFoundException(JOB_NOT_FOUND);
         }
             if (Files.exists(Paths.get(path))){
-                job.addFile(new File(path), false);
+                job.addSinglePath(path);
             }
             else {
                 throw new FileNotFoundException(FILE_NOT_FOUND);
