@@ -1,6 +1,6 @@
 package com.verapdf.restapi.controller;
 
-import com.verapdf.restapi.dto.FileNameDTO;
+import com.verapdf.restapi.dto.JobFileDTO;
 import com.verapdf.restapi.dto.PathDTO;
 import com.verapdf.restapi.service.JobService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,7 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.*;
 
 @RestController
@@ -25,38 +27,50 @@ public class JobController {
     }
 
     @PostMapping
-    public Map<String, String> startJob() {
+    public ResponseEntity<Map<String, String>> startJob() {
         UUID uuid = jobService.createJob();
-        return Collections.singletonMap("jobId", uuid.toString());
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{jobId}")
+                .buildAndExpand(uuid)
+                .toUri();
+        return ResponseEntity.created(location).body(Collections.singletonMap("jobId", uuid.toString()));
     }
 
     @DeleteMapping(value = "/{jobId}")
     public ResponseEntity<String> closeJob(@PathVariable UUID jobId) {
-        UUID uuid = jobService.closeJob(jobId);
-        if (uuid == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(JOB_NOT_FOUND);
-        }
-        return ResponseEntity.ok(uuid.toString());
-    }
-
-    @PostMapping(value="/{jobId}/files")
-    public ResponseEntity<String> uploadFiles(@PathVariable UUID jobId, @RequestParam("file") MultipartFile file) {
-        jobService.setFile(jobId, file);
-
+        jobService.closeJob(jobId);
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/{jobId}/localFiles")
-    public ResponseEntity<String> deleteFiles(@PathVariable UUID jobId, @RequestBody FileNameDTO dto) {
+    @PostMapping(value="/{jobId}/files", headers = "content-type=multipart/form-data")
+    public ResponseEntity<JobFileDTO> uploadFiles(@PathVariable UUID jobId, @RequestParam("file") MultipartFile file) {
 
-        jobService.deleteFile(jobId, dto.getFileName());
+        JobFileDTO dto = jobService.addFile(jobId, file);
+        //TODO: FIX LOCATION
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{jobId}")
+                .buildAndExpand(dto.getJobId())
+                .toUri();
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.created(location).body(dto);
+    }
+    @PostMapping(value = "/{jobId}/files", headers = "content-type=application/json")
+    public ResponseEntity<JobFileDTO> createPaths(@PathVariable UUID jobId, @RequestBody PathDTO dto) {
+        JobFileDTO jobDTO = jobService.addPath(jobId, dto.getPath());
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{jobId}")
+                .buildAndExpand(jobDTO.getJobId())
+                .toUri();
+        return ResponseEntity.created(location).body(jobDTO);
     }
 
-    @PostMapping("/{jobId}/localFiles")
-    public ResponseEntity<String> createPaths(@PathVariable UUID jobId, @RequestBody PathDTO dto) {
-         jobService.setPath(jobId, dto.getLocalPath());
+    @DeleteMapping("/{jobId}/files/{fileId}")
+    public ResponseEntity<JobFileDTO> deleteFiles(@PathVariable UUID jobId, @PathVariable UUID fileId) {
+
+        jobService.deleteFile(jobId, fileId);
 
         return ResponseEntity.ok().build();
     }

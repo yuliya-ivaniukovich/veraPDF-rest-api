@@ -1,24 +1,23 @@
 package com.verapdf.restapi.service;
 
+import com.verapdf.restapi.dto.JobFileDTO;
 import com.verapdf.restapi.entity.Job;
-import com.verapdf.restapi.exception.FileNotFoundException;
-import com.verapdf.restapi.exception.JobNotFoundException;
+import com.verapdf.restapi.exception.ResourceNotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 
+//TODO: Clear feature/policy (4/Error)
+//TODO: bad requests
 @Service
 public class JobService {
     private static final Logger log = LogManager.getLogger(JobService.class);
@@ -28,81 +27,62 @@ public class JobService {
 
     private Map<UUID, Job> jobHashMap;
 
-    @Value("${jobs}")
-    private String jobsPath;
+    @Value("${jobsBaseDir}")
+    private String jobsBaseDir;
 
-    @Value("${pdfRoot}")
-    private String pdfRootPath;
+    @Value("${pdfDir}")
+    private String pdfDir;
 
     public JobService() {
         jobHashMap = new HashMap<>();
     }
 
     public UUID createJob() {
-        Job job = new Job(jobsPath, pdfRootPath);
-        jobHashMap.put(job.getJobId(), job);
-        return job.getJobId();
+        Job job = new Job(jobsBaseDir, pdfDir);
+        UUID jobId = job.getJobId();
+        jobHashMap.put(jobId, job);
+        return jobId;
     }
 
     private Job getJob(UUID uuid) {
       return jobHashMap.get(uuid);
     }
 
-    public void setFiles(UUID uuid, List<MultipartFile> files) {
+    public JobFileDTO addFile(UUID uuid, MultipartFile file) {
         Job job = getJob(uuid);
-
         if (job == null) {
-            throw new JobNotFoundException(JOB_NOT_FOUND);
+            throw new ResourceNotFoundException(JOB_NOT_FOUND);
         }
-
-        job.addFiles(files);
+        return job.addSingleFile(file);
     }
 
-    public void setFile(UUID uuid, MultipartFile file) {
-        Job job = getJob(uuid);
+    public void deleteFile(UUID jobUUID, UUID fileUUID) {
+        Job job = getJob(jobUUID);
         if (job == null) {
-            throw new JobNotFoundException(JOB_NOT_FOUND);
+            throw new ResourceNotFoundException(JOB_NOT_FOUND);
         }
-        job.addSingleFile(file);
+        job.deleteFile(fileUUID);
     }
 
-    public void deleteFile(UUID uuid, String fileName) {
+    public JobFileDTO addPath(UUID uuid, String path) {
         Job job = getJob(uuid);
         if (job == null) {
-            throw new JobNotFoundException(JOB_NOT_FOUND);
-        }
-            Path filePath = Paths.get(jobsPath, job.getJobId().toString(), pdfRootPath, fileName);
-
-        log.debug("Delete path: " + filePath.toString());
-
-            try {
-                Files.deleteIfExists(filePath);
-            } catch (IOException e) {
-                log.error("Unable to delete file.", e);
-            }
-    }
-
-    public void setPath(UUID uuid, String path) {
-        Job job = getJob(uuid);
-        if (job == null) {
-            throw new JobNotFoundException(JOB_NOT_FOUND);
+            throw new ResourceNotFoundException(JOB_NOT_FOUND);
         }
             if (Files.exists(Paths.get(path))){
-                job.addSinglePath(path);
+                return job.addSinglePath(path);
             }
             else {
-                throw new FileNotFoundException(FILE_NOT_FOUND);
+                throw new ResourceNotFoundException(FILE_NOT_FOUND);
             }
     }
 
-    public UUID closeJob(UUID uuid) {
+    public void closeJob(UUID uuid) {
         Job job = getJob(uuid);
         if (job == null) {
-           return null;
+           throw new ResourceNotFoundException(JOB_NOT_FOUND);
         }
         job.close();
-
-        return job.getJobId();
     }
 
 }

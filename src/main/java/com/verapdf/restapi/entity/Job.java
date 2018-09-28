@@ -1,6 +1,9 @@
 package com.verapdf.restapi.entity;
 
-import com.verapdf.restapi.utils.FileUtils;
+import com.verapdf.restapi.dto.JobFileDTO;
+import com.verapdf.restapi.exception.FileAlreadyExistsException;
+import com.verapdf.restapi.exception.ResourceNotFoundException;
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 
 import java.io.*;
@@ -9,89 +12,104 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class Job implements Closeable {
 
     private static final Logger log = LogManager.getLogger(Job.class);
 
-    private UUID jobId;
+    private final UUID jobId;
 
-    private List<File> files;
-    private List<File> tempFiles;
+    private Map<UUID, File> files;
 
-    private Path jobDirectory;
-    private Path pdfDirectory;
+    private File jobDirectory;
+    private File pdfDirectory;
 
     public Job(String rootDirectory, String pdfDirectory) {
-        files = new LinkedList<>();
-        tempFiles = new LinkedList<>();
-        this.jobId = UUID.randomUUID();
-        this.jobDirectory = Paths.get(rootDirectory, jobId.toString());
-        this.pdfDirectory = Paths.get(rootDirectory, jobId.toString(), pdfDirectory);
-        prepareJob();
-    }
-
-    private void prepareJob() {
-        FileUtils.createDirectory(pdfDirectory);
+        files = new HashMap<>();
+        this.jobId = prepareJob(rootDirectory, pdfDirectory);
     }
 
     public UUID getJobId() {
         return jobId;
     }
 
-    public void addFiles(List<MultipartFile> files) {
-        for (MultipartFile file : files) {
-            addSingleFile(file);
+    private UUID prepareJob(String rootDirectory, String pdfDirectory) {
+        //TODO: check
+
+        UUID uuid = UUID.randomUUID();
+        File file = new File(this.pdfDirectory, uuid.toString());
+        while (file.exists()) {
+            uuid = UUID.randomUUID();
+            file = new File(this.pdfDirectory, uuid.toString());
         }
+
+        this.jobDirectory = new File(rootDirectory, uuid.toString());
+        this.pdfDirectory = new File(this.jobDirectory, pdfDirectory);
+        this.pdfDirectory.mkdirs();
+
+        return uuid;
     }
 
-    public void addSingleFile(MultipartFile file) {
-        Path filePath = Paths.get(pdfDirectory.toString(), file.getOriginalFilename());
-        File newFile = new File(filePath.toString());
-        try (
-                InputStream inputStream =file.getInputStream();
-                OutputStream outputStream = new FileOutputStream(newFile)
-        ) {
-            int read;
-            byte[] bytes = new byte[1024];
-            while ((read = inputStream.read(bytes)) != -1) {
-                outputStream.write(bytes, 0, read);
-            }
-            tempFiles.add(newFile);
+    public JobFileDTO addSingleFile(MultipartFile file) {
+        //TODO: move to service ?
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null) {
+            throw new ResourceNotFoundException();
+        }
+
+        File newFile = new File(pdfDirectory, originalFilename);
+
+        if (newFile.exists()) {
+            throw new FileAlreadyExistsException();
+        }
+
+        try  {
+            FileUtils.copyInputStreamToFile(file.getInputStream(), newFile);
         } catch (IOException e) {
             log.error("Unable to transfer file.", e);
         }
-
+        UUID newFileUUID = UUID.randomUUID();
+        files.put(newFileUUID, newFile);
+        return new JobFileDTO(newFile, this.jobId, newFileUUID, FileType.REMOTE, newFile.getAbsolutePath());
     }
 
-    public void addSinglePath(String path) {
+    public JobFileDTO addSinglePath(String path) {
         File file = new File(path);
-        files.add(file);
+        for (File item : files.values()) {
+            if (file.equals(item)) {
+             throw new FileAlreadyExistsException();
+            }
+        }
+        UUID newUUID = UUID.randomUUID();
+        files.put(newUUID, file);
+        return new JobFileDTO(file, this.jobId, newUUID, FileType.LOCAL, file.getAbsolutePath());
     }
 
-    public void deleteFiles(String[] paths) {
-        for (String path : paths) {
-            files.removeIf(file -> file.getPath().equals(path));
+    public void deleteFile(UUID uuid) {
+        //todo: check
+        File file = files.get(uuid);
+        if (file.exists() && pdfDirectory.equals(file.getParentFile())) {
+            file.delete();
+        }
+        else {
+            throw new ResourceNotFoundException();
         }
     }
 
     @Override
     public void close() {
         try {
-            for (File file : tempFiles) {
-                Files.deleteIfExists(Paths.get(file.getAbsolutePath()));
+            for (Map.Entry<UUID, File> entry : files.entrySet()) {
+                Files.deleteIfExists(Paths.get(entry.getValue().getAbsolutePath()));
             }
         } catch (IOException e) {
             log.error("Unable to delete the file", e);
         }
 
         try {
-            org.apache.commons.io.FileUtils.deleteDirectory(new File(jobDirectory.toString()));
+            org.apache.commons.io.FileUtils.deleteDirectory(jobDirectory);
         } catch (IOException e) {
             log.error("Unable to delete directory", e);
         }
