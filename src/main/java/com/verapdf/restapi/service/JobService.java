@@ -17,7 +17,6 @@ import java.util.UUID;
 
 
 //TODO: Clear feature/policy (4/Error)
-//TODO: bad requests
 @Service
 public class JobService {
     private static final Logger log = LogManager.getLogger(JobService.class);
@@ -82,6 +81,7 @@ public class JobService {
         if (job == null) {
            throw new ResourceNotFoundException(JOB_NOT_FOUND);
         }
+        jobHashMap.remove(uuid);
         job.close();
     }
 

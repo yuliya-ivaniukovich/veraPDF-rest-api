@@ -6,7 +6,6 @@ public class VeraPDFRestApiException extends RuntimeException{
         super();
     }
 
-
     public VeraPDFRestApiException(String message) {
         super(message);
     }

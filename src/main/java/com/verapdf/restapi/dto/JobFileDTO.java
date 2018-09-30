@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.verapdf.restapi.entity.FileType;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.UUID;
 
 public class JobFileDTO {

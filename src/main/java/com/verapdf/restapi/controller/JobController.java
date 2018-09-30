@@ -4,7 +4,6 @@ import com.verapdf.restapi.dto.JobFileDTO;
 import com.verapdf.restapi.dto.PathDTO;
 import com.verapdf.restapi.service.JobService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,11 +46,12 @@ public class JobController {
     public ResponseEntity<JobFileDTO> uploadFiles(@PathVariable UUID jobId, @RequestParam("file") MultipartFile file) {
 
         JobFileDTO dto = jobService.addFile(jobId, file);
-        //TODO: FIX LOCATION
+
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
-                .path("/{jobId}")
-                .buildAndExpand(dto.getJobId())
+                .path("/{fileId}")
+                .build()
+                .expand(dto.getFileId())
                 .toUri();
 
         return ResponseEntity.created(location).body(dto);
@@ -61,8 +61,8 @@ public class JobController {
         JobFileDTO jobDTO = jobService.addPath(jobId, dto.getPath());
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
-                .path("/{jobId}")
-                .buildAndExpand(jobDTO.getJobId())
+                .path("/{fileId}")
+                .buildAndExpand(jobDTO.getFileId())
                 .toUri();
         return ResponseEntity.created(location).body(jobDTO);
     }

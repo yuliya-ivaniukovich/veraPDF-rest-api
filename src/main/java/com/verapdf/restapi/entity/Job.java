@@ -1,8 +1,8 @@
 package com.verapdf.restapi.entity;
 
 import com.verapdf.restapi.dto.JobFileDTO;
-import com.verapdf.restapi.exception.FileAlreadyExistsException;
 import com.verapdf.restapi.exception.ResourceNotFoundException;
+import com.verapdf.restapi.exception.FileSystemException;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 
@@ -18,6 +18,9 @@ import java.util.*;
 public class Job implements Closeable {
 
     private static final Logger log = LogManager.getLogger(Job.class);
+    private final String FILE_ALREADY_EXISTS = "FILE ALREADY EXISTS";
+    private final String FILE_NOT_FOUND = "FILE NOT FOUND";
+    private final String UNABLE_TO_DELETE_FILE = "UNABLE TO DELETE FILE";
 
     private final UUID jobId;
 
@@ -36,10 +39,10 @@ public class Job implements Closeable {
     }
 
     private UUID prepareJob(String rootDirectory, String pdfDirectory) {
-        //TODO: check
 
         UUID uuid = UUID.randomUUID();
         File file = new File(this.pdfDirectory, uuid.toString());
+
         while (file.exists()) {
             uuid = UUID.randomUUID();
             file = new File(this.pdfDirectory, uuid.toString());
@@ -53,16 +56,16 @@ public class Job implements Closeable {
     }
 
     public JobFileDTO addSingleFile(MultipartFile file) {
-        //TODO: move to service ?
+
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null) {
-            throw new ResourceNotFoundException();
+            throw new ResourceNotFoundException(FILE_NOT_FOUND);
         }
 
         File newFile = new File(pdfDirectory, originalFilename);
 
         if (newFile.exists()) {
-            throw new FileAlreadyExistsException();
+            throw new FileSystemException(FILE_ALREADY_EXISTS);
         }
 
         try  {
@@ -72,14 +75,15 @@ public class Job implements Closeable {
         }
         UUID newFileUUID = UUID.randomUUID();
         files.put(newFileUUID, newFile);
-        return new JobFileDTO(newFile, this.jobId, newFileUUID, FileType.REMOTE, newFile.getAbsolutePath());
+
+        return new JobFileDTO(newFile, this.jobId, newFileUUID, FileType.REMOTE, Paths.get(newFile.getAbsolutePath()).subpath(0, 2).toString());
     }
 
     public JobFileDTO addSinglePath(String path) {
         File file = new File(path);
         for (File item : files.values()) {
             if (file.equals(item)) {
-             throw new FileAlreadyExistsException();
+             throw new FileSystemException(FILE_ALREADY_EXISTS);
             }
         }
         UUID newUUID = UUID.randomUUID();
@@ -88,14 +92,17 @@ public class Job implements Closeable {
     }
 
     public void deleteFile(UUID uuid) {
-        //todo: check
+
         File file = files.get(uuid);
+        if (file == null) {
+            throw new ResourceNotFoundException(FILE_NOT_FOUND);
+        }
         if (file.exists() && pdfDirectory.equals(file.getParentFile())) {
-            file.delete();
+            if(!file.delete()) {
+                throw new FileSystemException(UNABLE_TO_DELETE_FILE);
+            }
         }
-        else {
-            throw new ResourceNotFoundException();
-        }
+        files.remove(uuid);
     }
 
     @Override
