@@ -58,6 +58,7 @@ public class Job implements Closeable {
     public JobFileDTO addSingleFile(MultipartFile file) {
 
         String originalFilename = file.getOriginalFilename();
+
         if (originalFilename == null) {
             throw new ResourceNotFoundException(FILE_NOT_FOUND);
         }
@@ -73,7 +74,7 @@ public class Job implements Closeable {
         } catch (IOException e) {
             log.error("Unable to transfer file.", e);
         }
-        UUID newFileUUID = UUID.randomUUID();
+        UUID newFileUUID = getUniqueUUID();
         files.put(newFileUUID, newFile);
 
         return new JobFileDTO(newFile, this.jobId, newFileUUID, FileType.REMOTE, Paths.get(newFile.getAbsolutePath()).subpath(0, 2).toString());
@@ -86,7 +87,7 @@ public class Job implements Closeable {
              throw new FileSystemException(FILE_ALREADY_EXISTS);
             }
         }
-        UUID newUUID = UUID.randomUUID();
+        UUID newUUID = getUniqueUUID();
         files.put(newUUID, file);
         return new JobFileDTO(file, this.jobId, newUUID, FileType.LOCAL, file.getAbsolutePath());
     }
@@ -121,5 +122,13 @@ public class Job implements Closeable {
             log.error("Unable to delete directory", e);
         }
 
+    }
+
+    private UUID getUniqueUUID() {
+        UUID uuid = UUID.randomUUID();
+        while (files.get(uuid) != null) {
+            uuid = UUID.randomUUID();
+        }
+        return uuid;
     }
 }

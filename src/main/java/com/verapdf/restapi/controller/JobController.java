@@ -56,6 +56,7 @@ public class JobController {
 
         return ResponseEntity.created(location).body(dto);
     }
+
     @PostMapping(value = "/{jobId}/files", headers = "content-type=application/json")
     public ResponseEntity<JobFileDTO> createPaths(@PathVariable UUID jobId, @RequestBody PathDTO dto) {
         JobFileDTO jobDTO = jobService.addPath(jobId, dto.getPath());

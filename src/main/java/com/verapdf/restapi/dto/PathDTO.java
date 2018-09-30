@@ -1,6 +1,7 @@
 package com.verapdf.restapi.dto;
 
 public class PathDTO {
+
     private String type;
     private String path;
 
