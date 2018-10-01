@@ -2,7 +2,7 @@ package com.verapdf.restapi.entity;
 
 import com.verapdf.restapi.dto.JobFileDTO;
 import com.verapdf.restapi.exception.ResourceNotFoundException;
-import com.verapdf.restapi.exception.FileSystemException;
+import com.verapdf.restapi.exception.BadRequestException;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 
@@ -11,10 +11,13 @@ import java.io.*;
 import org.apache.logging.log4j.Logger;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.PostConstruct;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
+//TODO: uuid overflow
+//TODO: init
 public class Job implements Closeable {
 
     private static final Logger log = LogManager.getLogger(Job.class);
@@ -34,23 +37,29 @@ public class Job implements Closeable {
         this.jobId = prepareJob(rootDirectory, pdfDirectory);
     }
 
+    @PostConstruct
+    private void init () {
+
+    }
+
     public UUID getJobId() {
         return jobId;
     }
 
     private UUID prepareJob(String rootDirectory, String pdfDirectory) {
+        UUID uuid;
 
-        UUID uuid = UUID.randomUUID();
-        File file = new File(this.pdfDirectory, uuid.toString());
+        do {
+             uuid = UUID.randomUUID();
+            this.jobDirectory = new File(rootDirectory, uuid.toString());
+        } while(jobDirectory.exists());
 
-        while (file.exists()) {
-            uuid = UUID.randomUUID();
-            file = new File(this.pdfDirectory, uuid.toString());
-        }
-
-        this.jobDirectory = new File(rootDirectory, uuid.toString());
         this.pdfDirectory = new File(this.jobDirectory, pdfDirectory);
-        this.pdfDirectory.mkdirs();
+        try {
+            FileUtils.forceMkdir(this.pdfDirectory);
+        } catch (IOException e) {
+            throw new BadRequestException(e.getMessage());
+        }
 
         return uuid;
     }
@@ -66,7 +75,7 @@ public class Job implements Closeable {
         File newFile = new File(pdfDirectory, originalFilename);
 
         if (newFile.exists()) {
-            throw new FileSystemException(FILE_ALREADY_EXISTS);
+            throw new BadRequestException(FILE_ALREADY_EXISTS);
         }
 
         try  {
@@ -84,7 +93,7 @@ public class Job implements Closeable {
         File file = new File(path);
         for (File item : files.values()) {
             if (file.equals(item)) {
-             throw new FileSystemException(FILE_ALREADY_EXISTS);
+             throw new BadRequestException(FILE_ALREADY_EXISTS);
             }
         }
         UUID newUUID = getUniqueUUID();
@@ -100,7 +109,7 @@ public class Job implements Closeable {
         }
         if (file.exists() && pdfDirectory.equals(file.getParentFile())) {
             if(!file.delete()) {
-                throw new FileSystemException(UNABLE_TO_DELETE_FILE);
+                throw new BadRequestException(UNABLE_TO_DELETE_FILE);
             }
         }
         files.remove(uuid);
@@ -125,10 +134,12 @@ public class Job implements Closeable {
     }
 
     private UUID getUniqueUUID() {
-        UUID uuid = UUID.randomUUID();
-        while (files.get(uuid) != null) {
+
+        UUID uuid;
+        do {
             uuid = UUID.randomUUID();
-        }
+        } while (files.containsKey(uuid));
+
         return uuid;
     }
 }

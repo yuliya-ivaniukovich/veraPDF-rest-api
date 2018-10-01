@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.verapdf.restapi.entity.FileType;
 
 import java.io.File;
-import java.nio.file.Paths;
 import java.util.UUID;
 
 public class JobFileDTO {
@@ -15,7 +14,6 @@ public class JobFileDTO {
     private UUID fileId;
     private FileType type;
     private String path;
-    //TODO: Cut pathes
 
     public JobFileDTO(File file, UUID jobId, UUID fileId, FileType type, String path) {
         this.setJobId(jobId);

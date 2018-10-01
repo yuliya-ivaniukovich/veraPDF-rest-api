@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.UUID;
 
 
-//TODO: Clear feature/policy (4/Error)
 @Service
 public class JobService {
     private static final Logger log = LogManager.getLogger(JobService.class);
@@ -24,7 +23,7 @@ public class JobService {
     private final static String JOB_NOT_FOUND = "Job not found.";
     private final static String FILE_NOT_FOUND = "File not found.";
 
-    private Map<UUID, Job> jobHashMap;
+    private Map<UUID, Job> jobMap;
 
     @Value("${jobsBaseDir}")
     private String jobsBaseDir;
@@ -33,18 +32,18 @@ public class JobService {
     private String pdfDir;
 
     public JobService() {
-        jobHashMap = new HashMap<>();
+        jobMap = new HashMap<>();
     }
 
     public UUID createJob() {
         Job job = new Job(jobsBaseDir, pdfDir);
         UUID jobId = job.getJobId();
-        jobHashMap.put(jobId, job);
+        jobMap.put(jobId, job);
         return jobId;
     }
 
     private Job getJob(UUID uuid) {
-      return jobHashMap.get(uuid);
+      return jobMap.get(uuid);
     }
 
     public JobFileDTO addFile(UUID uuid, MultipartFile file) {
@@ -81,8 +80,8 @@ public class JobService {
         if (job == null) {
            throw new ResourceNotFoundException(JOB_NOT_FOUND);
         }
-        jobHashMap.remove(uuid);
         job.close();
+        jobMap.remove(uuid);
     }
 
 }
