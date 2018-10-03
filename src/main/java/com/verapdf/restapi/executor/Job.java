@@ -1,14 +1,16 @@
-package com.verapdf.restapi.entity;
+package com.verapdf.restapi.executor;
 
 import com.verapdf.restapi.dto.JobFileDTO;
 import com.verapdf.restapi.exception.ResourceNotFoundException;
 import com.verapdf.restapi.exception.BadRequestException;
+import com.verapdf.restapi.exception.VeraPDFRestApiException;
 import org.apache.commons.io.FileUtils;
-import org.apache.logging.log4j.LogManager;
 
 import java.io.*;
 
-import org.apache.logging.log4j.Logger;
+import org.omg.CORBA.PUBLIC_MEMBER;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
@@ -20,7 +22,9 @@ import java.util.*;
 //TODO: init
 public class Job implements Closeable {
 
-    private static final Logger log = LogManager.getLogger(Job.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Job.class);
+    private static final int MAX_CHECK_UUID_ITERATIONS = 10;
+
     private final String FILE_ALREADY_EXISTS = "FILE ALREADY EXISTS";
     private final String FILE_NOT_FOUND = "FILE NOT FOUND";
     private final String UNABLE_TO_DELETE_FILE = "UNABLE TO DELETE FILE";
@@ -40,10 +44,6 @@ public class Job implements Closeable {
     @PostConstruct
     private void init () {
 
-    }
-
-    public UUID getJobId() {
-        return jobId;
     }
 
     private UUID prepareJob(String rootDirectory, String pdfDirectory) {
@@ -81,24 +81,32 @@ public class Job implements Closeable {
         try  {
             FileUtils.copyInputStreamToFile(file.getInputStream(), newFile);
         } catch (IOException e) {
-            log.error("Unable to transfer file.", e);
+            LOGGER.error("Unable to transfer file.", e);
         }
         UUID newFileUUID = getUniqueUUID();
         files.put(newFileUUID, newFile);
-
-        return new JobFileDTO(newFile, this.jobId, newFileUUID, FileType.REMOTE, Paths.get(newFile.getAbsolutePath()).subpath(0, 2).toString());
+        String path = jobDirectory.toURI().relativize(newFile.toURI()).getPath();
+        return new JobFileDTO(this.jobId, newFileUUID, newFile, path, JobFileDTO.FileType.REMOTE);
     }
 
     public JobFileDTO addSinglePath(String path) {
         File file = new File(path);
-        for (File item : files.values()) {
-            if (file.equals(item)) {
-             throw new BadRequestException(FILE_ALREADY_EXISTS);
+        UUID newUUID;
+
+        if (Files.exists(Paths.get(path))){
+            for (File item : files.values()) {
+                if (file.equals(item)) {
+                    throw new BadRequestException(FILE_ALREADY_EXISTS);
+                }
             }
+            newUUID = getUniqueUUID();
+            files.put(newUUID, file);
         }
-        UUID newUUID = getUniqueUUID();
-        files.put(newUUID, file);
-        return new JobFileDTO(file, this.jobId, newUUID, FileType.LOCAL, file.getAbsolutePath());
+        else {
+            throw new ResourceNotFoundException(FILE_NOT_FOUND);
+        }
+
+        return new JobFileDTO(this.jobId, newUUID, file, file.getAbsolutePath(), JobFileDTO.FileType.LOCAL);
     }
 
     public void deleteFile(UUID uuid) {
@@ -109,7 +117,7 @@ public class Job implements Closeable {
         }
         if (file.exists() && pdfDirectory.equals(file.getParentFile())) {
             if(!file.delete()) {
-                throw new BadRequestException(UNABLE_TO_DELETE_FILE);
+                LOGGER.warn(UNABLE_TO_DELETE_FILE);
             }
         }
         files.remove(uuid);
@@ -117,18 +125,11 @@ public class Job implements Closeable {
 
     @Override
     public void close() {
-        try {
-            for (Map.Entry<UUID, File> entry : files.entrySet()) {
-                Files.deleteIfExists(Paths.get(entry.getValue().getAbsolutePath()));
-            }
-        } catch (IOException e) {
-            log.error("Unable to delete the file", e);
-        }
 
         try {
             org.apache.commons.io.FileUtils.deleteDirectory(jobDirectory);
         } catch (IOException e) {
-            log.error("Unable to delete directory", e);
+            LOGGER.error("Unable to delete directory", e);
         }
 
     }
@@ -136,10 +137,34 @@ public class Job implements Closeable {
     private UUID getUniqueUUID() {
 
         UUID uuid;
+        int flag = 0;
         do {
+            if (flag > MAX_CHECK_UUID_ITERATIONS) {
+                throw new VeraPDFRestApiException();
+            }
             uuid = UUID.randomUUID();
+            ++flag;
         } while (files.containsKey(uuid));
 
         return uuid;
+    }
+
+    public String getFilePath(UUID fileId) {
+        if (!files.containsKey(fileId)) {
+            throw new ResourceNotFoundException(FILE_NOT_FOUND);
+        }
+        return files.get(fileId).getAbsolutePath();
+    }
+
+    public File getFile(UUID fileId) {
+        if (!files.containsKey(fileId)) {
+            throw new ResourceNotFoundException(FILE_NOT_FOUND);
+        }
+        return files.get(fileId);
+    }
+
+
+    public UUID getJobId() {
+        return jobId;
     }
 }

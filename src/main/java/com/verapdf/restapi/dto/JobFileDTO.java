@@ -1,12 +1,17 @@
 package com.verapdf.restapi.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.verapdf.restapi.entity.FileType;
 
 import java.io.File;
 import java.util.UUID;
 
 public class JobFileDTO {
+
+    public enum FileType {
+        REMOTE,
+        LOCAL
+    }
+
     @JsonIgnore
     private File file;
 
@@ -15,12 +20,14 @@ public class JobFileDTO {
     private FileType type;
     private String path;
 
-    public JobFileDTO(File file, UUID jobId, UUID fileId, FileType type, String path) {
+    public JobFileDTO() { }
+
+    public JobFileDTO(UUID jobId, UUID fileId, File file, String path, FileType type) {
         this.setJobId(jobId);
         this.setFileId(fileId);
-        this.setType(type);
-        this.setPath(path);
         this.setFile(file);
+        this.setPath(path);
+        this.setType(type);
     }
 
     public UUID getJobId() {
