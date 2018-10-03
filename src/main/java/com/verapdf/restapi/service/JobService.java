@@ -2,8 +2,8 @@ package com.verapdf.restapi.service;
 
 import com.verapdf.restapi.dto.JobFileDTO;
 import com.verapdf.restapi.dto.PathDTO;
-import com.verapdf.restapi.executor.Job;
 import com.verapdf.restapi.exception.ResourceNotFoundException;
+import com.verapdf.restapi.executor.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -45,7 +45,7 @@ public class JobService {
         if (!jobMap.containsKey(uuid)) {
             throw new ResourceNotFoundException(JOB_NOT_FOUND);
         }
-      return jobMap.get(uuid);
+        return jobMap.get(uuid);
     }
 
     public JobFileDTO addFile(UUID uuid, MultipartFile file) {

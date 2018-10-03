@@ -7,7 +7,9 @@ import org.verapdf.features.FeatureObjectType;
 import org.verapdf.pdfa.flavours.PDFAFlavour;
 import org.verapdf.pdfa.validation.profiles.Profiles;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,6 +41,7 @@ public class VeraPDFService {
                 .sorted()
                 .collect(Collectors.toList());
     }
+
     public List<String> getFeatureList() {
         return Collections.unmodifiableList(this.featureList);
     }

@@ -20,7 +20,8 @@ public class JobFileDTO {
     private FileType type;
     private String path;
 
-    public JobFileDTO() { }
+    public JobFileDTO() {
+    }
 
     public JobFileDTO(UUID jobId, UUID fileId, File file, String path, FileType type) {
         this.setJobId(jobId);

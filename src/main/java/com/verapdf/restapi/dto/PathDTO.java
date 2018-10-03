@@ -5,7 +5,8 @@ public class PathDTO {
     private JobFileDTO.FileType type;
     private String path;
 
-    public PathDTO() { }
+    public PathDTO() {
+    }
 
     public PathDTO(JobFileDTO.FileType type, String path) {
         this.type = type;

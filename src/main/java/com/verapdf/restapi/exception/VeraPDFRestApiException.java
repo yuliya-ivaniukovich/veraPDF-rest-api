@@ -1,6 +1,6 @@
 package com.verapdf.restapi.exception;
 
-public class VeraPDFRestApiException extends RuntimeException{
+public class VeraPDFRestApiException extends RuntimeException {
 
     public VeraPDFRestApiException() {
         super();

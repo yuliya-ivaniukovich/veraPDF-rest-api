@@ -14,7 +14,9 @@ import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBui
 
 import java.io.File;
 import java.net.URI;
-import java.util.*;
+import java.util.Collections;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/jobs")
@@ -50,8 +52,8 @@ public class JobController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping(value="/{jobId}/files", headers = "content-type=multipart/form-data")
-    public ResponseEntity<JobFileDTO> uploadFiles(@PathVariable UUID jobId, @RequestParam("file") MultipartFile file) {
+    @PostMapping(value = "/{jobId}/files", headers = "content-type=multipart/form-data")
+    public ResponseEntity<JobFileDTO> uploadFiles(@PathVariable UUID jobId, @RequestParam MultipartFile file) {
         JobFileDTO jobDTO = jobService.addFile(jobId, file);
         URI location = generateFileURI(jobDTO.getJobId(), jobDTO.getFileId());
         return ResponseEntity.created(location).body(jobDTO);

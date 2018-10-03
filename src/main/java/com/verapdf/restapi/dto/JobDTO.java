@@ -5,7 +5,8 @@ import java.util.UUID;
 public class JobDTO {
     private UUID jobId;
 
-    public JobDTO() { }
+    public JobDTO() {
+    }
 
     public JobDTO(UUID jobId) {
         this.setJobId(jobId);
