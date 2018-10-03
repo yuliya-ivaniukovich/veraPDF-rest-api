@@ -1,7 +1,5 @@
 package com.verapdf.restapi.controller;
 
-import com.verapdf.restapi.dto.FeaturesDTO;
-import com.verapdf.restapi.dto.ProfilesDTO;
 import com.verapdf.restapi.service.VeraPDFService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;

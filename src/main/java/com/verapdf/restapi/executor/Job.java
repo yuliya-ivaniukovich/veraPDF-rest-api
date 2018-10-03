@@ -110,17 +110,14 @@ public class Job implements Closeable {
         }
         File file = files.get(fileId);
         String filePath = file.getAbsolutePath();
-        JobFileDTO.FileType fileType;
+        JobFileDTO.FileType fileType = getFileType(file);
 
-        if (file.exists() && pdfDirectory.equals(file.getParentFile())) {
-            fileType = JobFileDTO.FileType.REMOTE;
+        if (fileType == JobFileDTO.FileType.REMOTE) {
             if (!file.delete()) {
                 LOGGER.warn(UNABLE_TO_DELETE_FILE);
             }
         }
-        else {
-            fileType = JobFileDTO.FileType.LOCAL;
-        }
+
         files.remove(fileId);
         return new JobFileDTO(this.jobId, fileId, file, filePath, fileType);
     }
