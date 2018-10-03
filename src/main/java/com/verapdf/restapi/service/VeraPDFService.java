@@ -24,6 +24,8 @@ public class VeraPDFService {
         profilesList = prepareProfilesList();
     }
 
+//todo: lex sort
+
     private List<String> prepareFeatureList() {
         List<String> featureList = new ArrayList<>();
         for (FeatureObjectType type : FeatureObjectType.values()) {

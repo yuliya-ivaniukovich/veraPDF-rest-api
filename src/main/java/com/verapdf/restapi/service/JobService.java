@@ -1,5 +1,6 @@
 package com.verapdf.restapi.service;
 
+import com.verapdf.restapi.dto.JobDTO;
 import com.verapdf.restapi.dto.JobFileDTO;
 import com.verapdf.restapi.dto.PathDTO;
 import com.verapdf.restapi.exception.ResourceNotFoundException;
@@ -15,7 +16,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-//todo: clear maven
 @Service
 public class JobService {
     private static final Logger LOGGER = LoggerFactory.getLogger(JobService.class);
@@ -41,7 +41,7 @@ public class JobService {
         return jobId;
     }
 
-    public Job getJob(UUID uuid) {
+    private Job getJob(UUID uuid) {
         if (!jobMap.containsKey(uuid)) {
             throw new ResourceNotFoundException(JOB_NOT_FOUND);
         }
@@ -54,10 +54,10 @@ public class JobService {
         return job.addSingleFile(file);
     }
 
-    public void deleteFile(UUID jobUUID, UUID fileUUID) {
+    public JobFileDTO deleteFile(UUID jobUUID, UUID fileUUID) {
         Job job = getJob(jobUUID);
 
-        job.deleteFile(fileUUID);
+        return job.deleteFile(fileUUID);
     }
 
     public JobFileDTO addPath(UUID uuid, String path) {
@@ -72,14 +72,18 @@ public class JobService {
         jobMap.remove(uuid);
     }
 
-    public PathDTO getJobFilePath(UUID jobId, UUID fileId) {
+    public JobFileDTO getJobFileDTO(UUID jobId, UUID fileId) {
         Job job = getJob(jobId);
-        return new PathDTO(JobFileDTO.FileType.LOCAL, job.getFilePath(fileId));
+        File file = job.getFile(fileId);
+        JobFileDTO.FileType fileType = job.getFileType(file);
+        return new JobFileDTO(jobId, fileId, file, file.getAbsolutePath(), fileType);
     }
 
-    public File getJobFile(UUID jobId, UUID fileId) {
-        Job job = getJob(jobId);
-        return job.getFile(fileId);
+    public JobDTO getJobDTO(UUID jobId) {
+        if (!jobMap.containsKey(jobId)) {
+            throw new ResourceNotFoundException(JOB_NOT_FOUND);
+        }
+        return new JobDTO(jobId);
     }
 
 }

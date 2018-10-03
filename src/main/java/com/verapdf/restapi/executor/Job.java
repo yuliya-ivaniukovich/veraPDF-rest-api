@@ -9,12 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.annotation.PostConstruct;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -26,9 +23,10 @@ public class Job implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Job.class);
     private static final int MAX_CHECK_UUID_ITERATIONS = 10;
 
-    private final String FILE_ALREADY_EXISTS = "FILE ALREADY EXISTS";
-    private final String FILE_NOT_FOUND = "FILE NOT FOUND";
-    private final String UNABLE_TO_DELETE_FILE = "UNABLE TO DELETE FILE";
+    private final String FILE_ALREADY_EXISTS = "File already exists";
+    private final String FILE_NOT_FOUND = "File not found";
+    private final String UNABLE_TO_DELETE_FILE = "Unable to delete file";
+    private final String UNABLE_TO_TRANSFER_FILE = "Unable to transfer file";
 
     private final UUID jobId;
 
@@ -42,11 +40,6 @@ public class Job implements Closeable {
         this.jobId = prepareJob(rootDirectory, pdfDirectory);
     }
 
-    @PostConstruct
-    private void init() {
-
-    }
-
     private UUID prepareJob(String rootDirectory, String pdfDirectory) {
         UUID uuid;
 
@@ -57,6 +50,7 @@ public class Job implements Closeable {
 
         this.pdfDirectory = new File(this.jobDirectory, pdfDirectory);
         try {
+            FileUtils.forceMkdir(this.jobDirectory);
             FileUtils.forceMkdir(this.pdfDirectory);
         } catch (IOException e) {
             throw new BadRequestException(e.getMessage());
@@ -83,8 +77,9 @@ public class Job implements Closeable {
             FileUtils.copyInputStreamToFile(file.getInputStream(), newFile);
         } catch (IOException e) {
             LOGGER.error("Unable to transfer file.", e);
+            throw new BadRequestException(UNABLE_TO_TRANSFER_FILE);
         }
-        UUID newFileUUID = getUniqueUUID();
+        UUID newFileUUID = getUniqueFileUUID();
         files.put(newFileUUID, newFile);
         String path = jobDirectory.toURI().relativize(newFile.toURI()).getPath();
         return new JobFileDTO(this.jobId, newFileUUID, newFile, path, JobFileDTO.FileType.REMOTE);
@@ -94,38 +89,44 @@ public class Job implements Closeable {
         File file = new File(path);
         UUID newUUID;
 
-        if (Files.exists(Paths.get(path))) {
-            for (File item : files.values()) {
-                if (file.equals(item)) {
-                    throw new BadRequestException(FILE_ALREADY_EXISTS);
-                }
-            }
-            newUUID = getUniqueUUID();
-            files.put(newUUID, file);
-        } else {
+        if (!file.exists()) {
             throw new ResourceNotFoundException(FILE_NOT_FOUND);
         }
+
+        for (File item : files.values()) {
+            if (file.equals(item)) {
+                throw new BadRequestException(FILE_ALREADY_EXISTS);
+            }
+        }
+        newUUID = getUniqueFileUUID();
+        files.put(newUUID, file);
 
         return new JobFileDTO(this.jobId, newUUID, file, file.getAbsolutePath(), JobFileDTO.FileType.LOCAL);
     }
 
-    public void deleteFile(UUID uuid) {
-
-        File file = files.get(uuid);
-        if (file == null) {
+    public JobFileDTO deleteFile(UUID fileId) {
+        if (!files.containsKey(fileId)) {
             throw new ResourceNotFoundException(FILE_NOT_FOUND);
         }
+        File file = files.get(fileId);
+        String filePath = file.getAbsolutePath();
+        JobFileDTO.FileType fileType;
+
         if (file.exists() && pdfDirectory.equals(file.getParentFile())) {
+            fileType = JobFileDTO.FileType.REMOTE;
             if (!file.delete()) {
                 LOGGER.warn(UNABLE_TO_DELETE_FILE);
             }
         }
-        files.remove(uuid);
+        else {
+            fileType = JobFileDTO.FileType.LOCAL;
+        }
+        files.remove(fileId);
+        return new JobFileDTO(this.jobId, fileId, file, filePath, fileType);
     }
 
     @Override
     public void close() {
-
         try {
             org.apache.commons.io.FileUtils.deleteDirectory(jobDirectory);
         } catch (IOException e) {
@@ -134,26 +135,26 @@ public class Job implements Closeable {
 
     }
 
-    private UUID getUniqueUUID() {
-
-        UUID uuid;
-        int flag = 0;
-        do {
-            if (flag > MAX_CHECK_UUID_ITERATIONS) {
-                throw new VeraPDFRestApiException();
+    private UUID getUniqueFileUUID() {
+        for (int flag = 0; flag < MAX_CHECK_UUID_ITERATIONS; ++flag) {
+            UUID uuid = UUID.randomUUID();
+            if (!files.containsKey(uuid)){
+                return uuid;
             }
-            uuid = UUID.randomUUID();
-            ++flag;
-        } while (files.containsKey(uuid));
-
-        return uuid;
+        }
+        throw new VeraPDFRestApiException();
     }
 
-    public String getFilePath(UUID fileId) {
-        if (!files.containsKey(fileId)) {
-            throw new ResourceNotFoundException(FILE_NOT_FOUND);
+    public JobFileDTO.FileType getFileType(File file) {
+        JobFileDTO.FileType fileType;
+
+        if (file.exists() && pdfDirectory.equals(file.getParentFile())) {
+            fileType = JobFileDTO.FileType.REMOTE;
         }
-        return files.get(fileId).getAbsolutePath();
+        else {
+            fileType = JobFileDTO.FileType.LOCAL;
+        }
+        return fileType;
     }
 
     public File getFile(UUID fileId) {
