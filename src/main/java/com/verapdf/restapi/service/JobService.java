@@ -2,7 +2,6 @@ package com.verapdf.restapi.service;
 
 import com.verapdf.restapi.dto.JobDTO;
 import com.verapdf.restapi.dto.JobFileDTO;
-import com.verapdf.restapi.dto.PathDTO;
 import com.verapdf.restapi.exception.ResourceNotFoundException;
 import com.verapdf.restapi.executor.Job;
 import org.slf4j.Logger;
@@ -11,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -20,7 +18,7 @@ import java.util.UUID;
 public class JobService {
     private static final Logger LOGGER = LoggerFactory.getLogger(JobService.class);
 
-    private final static String JOB_NOT_FOUND = "Job not found.";
+    private final static String JOB_NOT_FOUND = "Job not found";
 
     private Map<UUID, Job> jobMap;
 
@@ -41,13 +39,6 @@ public class JobService {
         return jobId;
     }
 
-    private Job getJob(UUID uuid) {
-        if (!jobMap.containsKey(uuid)) {
-            throw new ResourceNotFoundException(JOB_NOT_FOUND);
-        }
-        return jobMap.get(uuid);
-    }
-
     public JobFileDTO addFile(UUID uuid, MultipartFile file) {
         Job job = getJob(uuid);
 
@@ -65,18 +56,17 @@ public class JobService {
         return job.addSinglePath(path);
     }
 
-    public void closeJob(UUID uuid) {
+    public JobDTO closeJob(UUID uuid) {
         Job job = getJob(uuid);
 
         job.close();
         jobMap.remove(uuid);
+        return new JobDTO(uuid);
     }
 
-    public JobFileDTO getJobFileDTO(UUID jobId, UUID fileId) {
+    public JobFileDTO getJobFile(UUID jobId, UUID fileId) {
         Job job = getJob(jobId);
-        File file = job.getFile(fileId);
-        JobFileDTO.FileType fileType = job.getFileType(file);
-        return new JobFileDTO(jobId, fileId, file, file.getAbsolutePath(), fileType);
+        return job.getJobFile(fileId);
     }
 
     public JobDTO getJobDTO(UUID jobId) {
@@ -86,4 +76,10 @@ public class JobService {
         return new JobDTO(jobId);
     }
 
+    private Job getJob(UUID uuid) {
+        if (!jobMap.containsKey(uuid)) {
+            throw new ResourceNotFoundException(JOB_NOT_FOUND);
+        }
+        return jobMap.get(uuid);
+    }
 }

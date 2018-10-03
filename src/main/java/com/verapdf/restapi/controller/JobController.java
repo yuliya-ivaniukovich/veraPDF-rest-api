@@ -12,7 +12,6 @@ import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBui
 
 import java.net.URI;
 import java.util.Collections;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -27,7 +26,7 @@ public class JobController {
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, String>> startJob() {
+    public ResponseEntity startJob() {
         UUID uuid = jobService.createJob();
         URI location = MvcUriComponentsBuilder
                 .fromMethodName(JobController.class, "getJob", uuid)
@@ -37,14 +36,13 @@ public class JobController {
     }
 
     @GetMapping(value = "/{jobId}")
-    public ResponseEntity<JobDTO> getJob(@PathVariable UUID jobId) {
-        return ResponseEntity.ok(jobService.getJobDTO(jobId));
+    public JobDTO getJob(@PathVariable UUID jobId) {
+        return jobService.getJobDTO(jobId);
     }
 
     @DeleteMapping(value = "/{jobId}")
-    public ResponseEntity<String> closeJob(@PathVariable UUID jobId) {
-        jobService.closeJob(jobId);
-        return ResponseEntity.ok().build();
+    public JobDTO closeJob(@PathVariable UUID jobId) {
+        return jobService.closeJob(jobId);
     }
 
     @PostMapping(value = "/{jobId}/files", headers = "content-type=multipart/form-data")
@@ -55,7 +53,7 @@ public class JobController {
     }
 
     @PostMapping(value = "/{jobId}/files", headers = "content-type=application/json")
-    public ResponseEntity<JobFileDTO> createPaths(@PathVariable UUID jobId, @RequestBody PathDTO pathDTO) {
+    public ResponseEntity<JobFileDTO> createPath(@PathVariable UUID jobId, @RequestBody PathDTO pathDTO) {
         JobFileDTO jobFileDTO = jobService.addPath(jobId, pathDTO.getPath());
         URI location = generateFileURI(jobFileDTO.getJobId(), jobFileDTO.getFileId());
         return ResponseEntity.created(location).body(jobFileDTO);
@@ -63,20 +61,18 @@ public class JobController {
 
 
     @GetMapping(value = "/{jobId}/files/{fileId}")
-    public ResponseEntity<JobFileDTO> getJobFileDTO(@PathVariable UUID jobId, @PathVariable UUID fileId) {
-        JobFileDTO jobFileDTO = jobService.getJobFileDTO(jobId, fileId);
-        return ResponseEntity.ok(jobFileDTO);
+    public JobFileDTO getJobFileDTO(@PathVariable UUID jobId, @PathVariable UUID fileId) {
+        return jobService.getJobFile(jobId, fileId);
     }
 
     @DeleteMapping("/{jobId}/files/{fileId}")
-    public ResponseEntity<JobFileDTO> deleteFile(@PathVariable UUID jobId, @PathVariable UUID fileId) {
-        JobFileDTO jobFileDTO = jobService.deleteFile(jobId, fileId);
-        return ResponseEntity.ok(jobFileDTO);
+    public JobFileDTO deleteFile(@PathVariable UUID jobId, @PathVariable UUID fileId) {
+        return jobService.deleteFile(jobId, fileId);
     }
 
     private URI generateFileURI(UUID jobId, UUID fileId) {
         return MvcUriComponentsBuilder
-                .fromMethodName(JobController.class, "getJobFileDTO", jobId, fileId)
+                .fromMethodName(JobController.class, "getJobFile", jobId, fileId)
                 .build().toUri();
     }
 

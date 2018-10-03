@@ -16,8 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-//TODO: uuid overflow
-//TODO: init
+
 public class Job implements Closeable {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Job.class);
@@ -76,12 +75,12 @@ public class Job implements Closeable {
         try {
             FileUtils.copyInputStreamToFile(file.getInputStream(), newFile);
         } catch (IOException e) {
-            LOGGER.error("Unable to transfer file.", e);
+            LOGGER.error("Unable to transfer file", e);
             throw new BadRequestException(UNABLE_TO_TRANSFER_FILE);
         }
         UUID newFileUUID = getUniqueFileUUID();
         files.put(newFileUUID, newFile);
-        String path = jobDirectory.toURI().relativize(newFile.toURI()).getPath();
+        String path = getRelativeFilePath(newFile);
         return new JobFileDTO(this.jobId, newFileUUID, newFile, path, JobFileDTO.FileType.REMOTE);
     }
 
@@ -122,6 +121,22 @@ public class Job implements Closeable {
         return new JobFileDTO(this.jobId, fileId, file, filePath, fileType);
     }
 
+    public JobFileDTO getJobFile(UUID fileId) {
+        File file = getFile(fileId);
+        JobFileDTO.FileType fileType = getFileType(file);
+        String path;
+        if (fileType == JobFileDTO.FileType.REMOTE) {
+            path = getRelativeFilePath(file);
+        } else {
+            path = file.getAbsolutePath();
+        }
+        return new JobFileDTO(this.jobId, fileId, file, path, fileType);
+    }
+
+    public UUID getJobId() {
+        return jobId;
+    }
+
     @Override
     public void close() {
         try {
@@ -135,34 +150,32 @@ public class Job implements Closeable {
     private UUID getUniqueFileUUID() {
         for (int flag = 0; flag < MAX_CHECK_UUID_ITERATIONS; ++flag) {
             UUID uuid = UUID.randomUUID();
-            if (!files.containsKey(uuid)){
+            if (!files.containsKey(uuid)) {
                 return uuid;
             }
         }
         throw new VeraPDFRestApiException();
     }
 
-    public JobFileDTO.FileType getFileType(File file) {
+    private String getRelativeFilePath(File file) {
+        return jobDirectory.toURI().relativize(file.toURI()).getPath();
+    }
+
+    private JobFileDTO.FileType getFileType(File file) {
         JobFileDTO.FileType fileType;
 
         if (file.exists() && pdfDirectory.equals(file.getParentFile())) {
             fileType = JobFileDTO.FileType.REMOTE;
-        }
-        else {
+        } else {
             fileType = JobFileDTO.FileType.LOCAL;
         }
         return fileType;
     }
 
-    public File getFile(UUID fileId) {
+    private File getFile(UUID fileId) {
         if (!files.containsKey(fileId)) {
             throw new ResourceNotFoundException(FILE_NOT_FOUND);
         }
         return files.get(fileId);
-    }
-
-
-    public UUID getJobId() {
-        return jobId;
     }
 }
