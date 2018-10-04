@@ -60,12 +60,12 @@ public class JobController {
 
 
     @GetMapping(value = "/{jobId}/files/{fileId}")
-    public JobFileDTO getJobFileDTO(@PathVariable UUID jobId, @PathVariable UUID fileId) {
+    public JobFileDTO getJobFile(@PathVariable UUID jobId, @PathVariable UUID fileId) {
         return jobService.getJobFile(jobId, fileId);
     }
 
     @DeleteMapping("/{jobId}/files/{fileId}")
-    public JobFileDTO deleteFile(@PathVariable UUID jobId, @PathVariable UUID fileId) {
+    public JobFileDTO deleteJobFile(@PathVariable UUID jobId, @PathVariable UUID fileId) {
         return jobService.deleteFile(jobId, fileId);
     }
 
