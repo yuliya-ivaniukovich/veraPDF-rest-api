@@ -11,7 +11,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.UUID;
 
 @RestController
@@ -26,13 +25,14 @@ public class JobController {
     }
 
     @PostMapping
-    public ResponseEntity startJob() {
-        UUID uuid = jobService.createJob();
+    public ResponseEntity<JobDTO> prepareJob() {
+        JobDTO jobDTO = jobService.createJob();
+
         URI location = MvcUriComponentsBuilder
-                .fromMethodName(JobController.class, "getJob", uuid)
+                .fromMethodName(JobController.class, "getJob", jobDTO.getJobId())
                 .build()
                 .toUri();
-        return ResponseEntity.created(location).body(Collections.singletonMap("jobId", uuid.toString()));
+        return ResponseEntity.created(location).body(jobDTO);
     }
 
     @GetMapping(value = "/{jobId}")

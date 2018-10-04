@@ -9,12 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.io.*;
+import java.util.*;
 
 
 public class Job implements Closeable {
@@ -29,13 +25,12 @@ public class Job implements Closeable {
 
     private final UUID jobId;
 
-    private Map<UUID, File> files;
+    private Map<UUID, File> files = new HashMap<>();
 
     private File jobDirectory;
     private File pdfDirectory;
 
     public Job(String rootDirectory, String pdfDirectory) {
-        files = new HashMap<>();
         this.jobId = prepareJob(rootDirectory, pdfDirectory);
     }
 
@@ -47,12 +42,19 @@ public class Job implements Closeable {
             this.jobDirectory = new File(rootDirectory, uuid.toString());
         } while (jobDirectory.exists());
 
-        this.pdfDirectory = new File(this.jobDirectory, pdfDirectory);
         try {
             FileUtils.forceMkdir(this.jobDirectory);
+        } catch (IOException e) {
+            throw new VeraPDFRestApiException(e.getMessage(), e);
+        }
+
+        this.pdfDirectory = new File(this.jobDirectory, pdfDirectory);
+
+        try {
             FileUtils.forceMkdir(this.pdfDirectory);
         } catch (IOException e) {
-            throw new BadRequestException(e.getMessage());
+            this.jobDirectory.delete();
+            throw new VeraPDFRestApiException(e.getMessage(), e);
         }
 
         return uuid;
@@ -76,7 +78,7 @@ public class Job implements Closeable {
             FileUtils.copyInputStreamToFile(file.getInputStream(), newFile);
         } catch (IOException e) {
             LOGGER.error("Unable to transfer file", e);
-            throw new BadRequestException(UNABLE_TO_TRANSFER_FILE);
+            throw new VeraPDFRestApiException(UNABLE_TO_TRANSFER_FILE);
         }
         UUID newFileUUID = getUniqueFileUUID();
         files.put(newFileUUID, newFile);
