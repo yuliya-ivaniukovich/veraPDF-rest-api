@@ -1,0 +1,13 @@
+{
+  "properties": [
+    {
+      "name": "jobsBaseDir",
+      "type": "java.lang.String",
+      "description": "Root for all jobs."
+    },
+    {
+      "name": "pdfDir",
+      "type": "java.lang.String",
+      "description": "The name of the root for PDF files."
+    }
+  ] }
