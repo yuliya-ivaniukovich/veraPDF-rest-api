@@ -2,7 +2,6 @@ package com.verapdf.restapi.controller;
 
 import com.verapdf.restapi.dto.JobDTO;
 import com.verapdf.restapi.dto.JobFileDTO;
-import com.verapdf.restapi.dto.PathDTO;
 import com.verapdf.restapi.service.JobService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -53,10 +52,10 @@ public class JobController {
     }
 
     @PostMapping(value = "/{jobId}/files", headers = "content-type=application/json")
-    public ResponseEntity<JobFileDTO> createPath(@PathVariable UUID jobId, @RequestBody PathDTO pathDTO) {
-        JobFileDTO jobFileDTO = jobService.addPath(jobId, pathDTO.getPath());
-        URI location = generateFileURI(jobFileDTO.getJobId(), jobFileDTO.getFileId());
-        return ResponseEntity.created(location).body(jobFileDTO);
+    public ResponseEntity<JobFileDTO> createPath(@PathVariable UUID jobId, @RequestBody JobFileDTO jobFileDTO) {
+        JobFileDTO newJobFileDTO = jobService.addPath(jobId, jobFileDTO.getPath());
+        URI location = generateFileURI(newJobFileDTO.getJobId(), newJobFileDTO.getFileId());
+        return ResponseEntity.created(location).body(newJobFileDTO);
     }
 
 
