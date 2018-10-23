@@ -82,7 +82,7 @@ public class Job implements Closeable {
         }
         UUID newFileUUID = getUniqueFileUUID();
         files.put(newFileUUID, newFile);
-        String path = getRelativeFilePath(newFile);
+        String path = getRelativeFilePath(pdfDirectory, newFile);
         return new JobFileDTO(this.jobId, newFileUUID, newFile, path, JobFileDTO.FileType.REMOTE);
     }
 
@@ -128,7 +128,7 @@ public class Job implements Closeable {
         JobFileDTO.FileType fileType = getFileType(file);
         String path;
         if (fileType == JobFileDTO.FileType.REMOTE) {
-            path = getRelativeFilePath(file);
+            path = getRelativeFilePath(pdfDirectory, file);
         } else {
             path = file.getAbsolutePath();
         }
@@ -159,8 +159,8 @@ public class Job implements Closeable {
         throw new VeraPDFRestApiException();
     }
 
-    private String getRelativeFilePath(File file) {
-        return jobDirectory.toURI().relativize(file.toURI()).getPath();
+    private String getRelativeFilePath(File parentDirectory, File file) {
+        return parentDirectory.toURI().relativize(file.toURI()).getPath();
     }
 
     private JobFileDTO.FileType getFileType(File file) {
